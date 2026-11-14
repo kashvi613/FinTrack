@@ -1,33 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>FinTrack</title>
-</head>
-<body>
-    <h1>FinTrack</h1>
-    <p>Personal Expense Tracker</p>
-    <p><a href="/add">+ Add Expense</a></p>
+{% extends "base.html" %}
 
+{% block title %}Dashboard - FinTrack{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="card">
     <h2>Expense History</h2>
     {% if expenses %}
-    <table border="1" cellpadding="6">
+    <table>
         <tr>
             <th>Date</th>
             <th>Category</th>
-            <th>Amount</th>
             <th>Description</th>
+            <th class="right">Amount</th>
         </tr>
         {% for e in expenses %}
         <tr>
             <td>{{ e["date"] }}</td>
-            <td>{{ e["category"] }}</td>
-            <td>{{ e["amount"] }}</td>
+            <td><span class="badge {{ e['category']|lower }}">{{ e["category"] }}</span></td>
             <td>{{ e["description"] }}</td>
+            <td class="right">₹{{ e["amount"] }}</td>
         </tr>
         {% endfor %}
     </table>
     {% else %}
-    <p>No expenses yet.</p>
+    <p class="muted">No expenses yet. Add your first one!</p>
     {% endif %}
-</body>
-</html>
+</div>
+{% endblock %}
