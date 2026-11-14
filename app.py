@@ -1,10 +1,41 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
+from database import get_connection, init_db
 
 app = Flask(__name__)
+init_db()
+
+CATEGORIES = ["Food", "Travel", "Shopping", "Education", "Other"]
+
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    conn = get_connection()
+    expenses = conn.execute(
+        "SELECT * FROM expenses ORDER BY date DESC, id DESC"
+    ).fetchall()
+    conn.close()
+    return render_template("index.html", expenses=expenses)
+
+
+@app.route("/add", methods=["GET", "POST"])
+def add_expense():
+    if request.method == "POST":
+        amount = float(request.form["amount"])
+        category = request.form["category"]
+        date = request.form["date"]
+        description = request.form["description"]
+
+        conn = get_connection()
+        conn.execute(
+            "INSERT INTO expenses (amount, category, date, description) VALUES (?, ?, ?, ?)",
+            (amount, category, date, description),
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for("home"))
+
+    return render_template("add.html", categories=CATEGORIES)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
