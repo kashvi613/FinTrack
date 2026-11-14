@@ -13,6 +13,7 @@
         <div class="logo">Fin<span>Track</span></div>
         <nav>
             <a href="{{ url_for('home') }}" class="{{ 'active' if request.path == '/' else '' }}">Dashboard</a>
+            <a href="{{ url_for('history') }}" class="{{ 'active' if request.path == '/history' else '' }}">History</a>
             <a href="{{ url_for('add_expense') }}" class="{{ 'active' if request.path == '/add' else '' }}">+ Add Expense</a>
         </nav>
     </aside>

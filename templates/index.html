@@ -5,8 +5,23 @@
 {% block content %}
 <h1>Dashboard</h1>
 
+<div class="stats">
+    <div class="card stat">
+        <p class="stat-label">Total Spent</p>
+        <p class="stat-value">{{ stats["total"]|inr }}</p>
+    </div>
+    <div class="card stat">
+        <p class="stat-label">Transactions</p>
+        <p class="stat-value">{{ stats["count"] }}</p>
+    </div>
+    <div class="card stat">
+        <p class="stat-label">Average Spend</p>
+        <p class="stat-value">{{ stats["average"]|inr }}</p>
+    </div>
+</div>
+
 <div class="card">
-    <h2>Expense History</h2>
+    <h2>Recent Expenses</h2>
     {% if expenses %}
     <table>
         <tr>
@@ -20,7 +35,7 @@
             <td>{{ e["date"] }}</td>
             <td><span class="badge {{ e['category']|lower }}">{{ e["category"] }}</span></td>
             <td>{{ e["description"] }}</td>
-            <td class="right">₹{{ e["amount"] }}</td>
+            <td class="right">{{ e["amount"]|inr }}</td>
         </tr>
         {% endfor %}
     </table>

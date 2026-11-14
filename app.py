@@ -7,15 +7,69 @@ init_db()
 CATEGORIES = ["Food", "Travel", "Shopping", "Education", "Other"]
 
 
+# Custom Jinja filter: 150000 -> ₹1,50,000.00 (Indian grouping)
+@app.template_filter("inr")
+def format_inr(value):
+    value = float(value or 0)
+    whole, decimal = f"{value:.2f}".split(".")
+    if len(whole) > 3:
+        last3 = whole[-3:]      # aakhri 3 digits ek group
+        rest = whole[:-3]       # baaki digits 2-2 ke groups mein
+        parts = []
+        while len(rest) > 2:
+            parts.insert(0, rest[-2:])
+            rest = rest[:-2]
+        if rest:
+            parts.insert(0, rest)
+        whole = ",".join(parts) + "," + last3
+    return f"₹{whole}.{decimal}"
+
+
 @app.route("/")
 def home():
     conn = get_connection()
-    expenses = conn.execute(
-        "SELECT * FROM expenses ORDER BY date DESC, id DESC"
-    ).fetchall()
-    conn.close()
-    return render_template("index.html", expenses=expenses)
 
+    # Kyun COALESCE: table khaali ho to SUM/AVG NULL deta hai, usse 0 bana deta hai
+    stats = conn.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total,
+               COUNT(*) AS count,
+               COALESCE(AVG(amount), 0) AS average
+        FROM expenses
+        """
+    ).fetchone()
+
+    recent = conn.execute(
+        "SELECT * FROM expenses ORDER BY date DESC, id DESC LIMIT 5"
+    ).fetchall()
+
+    conn.close()
+    return render_template("index.html", stats=stats, expenses=recent)
+
+@app.route("/history")
+def history():
+    # Kyun request.args: filter URL mein aata hai (/history?category=Food), isliye args, form nahi
+    selected = request.args.get("category", "")
+
+    conn = get_connection()
+    if selected:
+        # Kyun WHERE category = ?: sirf us category ki rows, aur ? se SQL injection se bachav
+        expenses = conn.execute(
+            "SELECT * FROM expenses WHERE category = ? ORDER BY date DESC, id DESC",
+            (selected,),
+        ).fetchall()
+    else:
+        expenses = conn.execute(
+            "SELECT * FROM expenses ORDER BY date DESC, id DESC"
+        ).fetchall()
+    conn.close()
+
+    return render_template(
+        "history.html",
+        expenses=expenses,
+        categories=CATEGORIES,
+        selected=selected,
+    )
 
 @app.route("/add", methods=["GET", "POST"])
 def add_expense():
@@ -26,6 +80,7 @@ def add_expense():
         description = request.form["description"]
 
         conn = get_connection()
+        # Kyun ?: SQL injection se bachne ke liye parameterized query
         conn.execute(
             "INSERT INTO expenses (amount, category, date, description) VALUES (?, ?, ?, ?)",
             (amount, category, date, description),

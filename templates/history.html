@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}History - FinTrack{% endblock %}
+
+{% block content %}
+<h1>Expense History</h1>
+
+<div class="card">
+    <form method="GET" class="filter-bar">
+        <label for="category">Filter by category</label>
+        <select name="category" id="category" onchange="this.form.submit()">
+            <option value="">All</option>
+            {% for c in categories %}
+            <option value="{{ c }}" {{ 'selected' if c == selected else '' }}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    {% if expenses %}
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th class="right">Amount</th>
+        </tr>
+        {% for e in expenses %}
+        <tr>
+            <td>{{ e["date"] }}</td>
+            <td><span class="badge {{ e['category']|lower }}">{{ e["category"] }}</span></td>
+            <td>{{ e["description"] }}</td>
+            <td class="right">{{ e["amount"]|inr }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">No expenses found.</p>
+    {% endif %}
+</div>
+{% endblock %}
