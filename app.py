@@ -1,7 +1,7 @@
 import math
 from datetime import datetime
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from database import get_connection, init_db
 
 app = Flask(__name__)
@@ -166,6 +166,96 @@ def delete_expense(expense_id):
     # Delete ke baad usi filter par wapas jao jahan se aaye the
     return redirect(url_for("history", category=request.form.get("category") or None))
 
+# ---------------- REST API (JSON) ----------------
+
+@app.route("/api/expenses", methods=["GET"])
+def api_list_expenses():
+    category = request.args.get("category", "")
+
+    conn = get_connection()
+    if category:
+        rows = conn.execute(
+            "SELECT * FROM expenses WHERE category = ? ORDER BY date DESC, id DESC",
+            (category,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM expenses ORDER BY date DESC, id DESC"
+        ).fetchall()
+    conn.close()
+
+    # Kyun dict(row): sqlite3.Row ko JSON mein nahi badal sakte, dict ko badal sakte hain
+    return jsonify([dict(row) for row in rows])
+
+
+@app.route("/api/expenses", methods=["POST"])
+def api_create_expense():
+    # Kyun silent=True: galat JSON aaye to crash nahi, None milta hai
+    data = request.get_json(silent=True) or {}
+
+    form = {
+        "amount": str(data.get("amount", "")).strip(),
+        "category": str(data.get("category", "")),
+        "date": str(data.get("date", "")),
+        "description": str(data.get("description", "")).strip(),
+    }
+    # Kyun wahi validate_expense: web form aur API dono ke rules same rahein
+    error, amount = validate_expense(form)
+    if error:
+        return jsonify({"error": error}), 400
+
+    conn = get_connection()
+    cursor = conn.execute(
+        "INSERT INTO expenses (amount, category, date, description) VALUES (?, ?, ?, ?)",
+        (amount, form["category"], form["date"], form["description"]),
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+
+    return jsonify({"id": new_id, "amount": amount, **{k: form[k] for k in ("category", "date", "description")}}), 201
+
+
+@app.route("/api/expenses/<int:expense_id>", methods=["DELETE"])
+def api_delete_expense(expense_id):
+    conn = get_connection()
+    cursor = conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+    conn.commit()
+    conn.close()
+
+    # Kyun rowcount: 0 matlab us id ki koi row thi hi nahi
+    if cursor.rowcount == 0:
+        return jsonify({"error": "Expense not found."}), 404
+    return jsonify({"deleted": expense_id})
+
+
+@app.route("/api/summary", methods=["GET"])
+def api_summary():
+    conn = get_connection()
+    stats = conn.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total,
+               COUNT(*) AS count,
+               COALESCE(AVG(amount), 0) AS average
+        FROM expenses
+        """
+    ).fetchone()
+    by_category = conn.execute(
+        """
+        SELECT category, SUM(amount) AS total, COUNT(*) AS count
+        FROM expenses
+        GROUP BY category
+        ORDER BY total DESC
+        """
+    ).fetchall()
+    conn.close()
+
+    return jsonify({
+        "total": stats["total"],
+        "count": stats["count"],
+        "average": round(stats["average"], 2),
+        "by_category": [dict(row) for row in by_category],
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
