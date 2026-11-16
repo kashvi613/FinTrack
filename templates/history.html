@@ -23,6 +23,7 @@
             <th>Category</th>
             <th>Description</th>
             <th class="right">Amount</th>
+            <th></th>
         </tr>
         {% for e in expenses %}
         <tr>
@@ -30,6 +31,14 @@
             <td><span class="badge {{ e['category']|lower }}">{{ e["category"] }}</span></td>
             <td>{{ e["description"] }}</td>
             <td class="right">{{ e["amount"]|inr }}</td>
+            <td class="right">
+                <form method="POST"
+                      action="{{ url_for('delete_expense', expense_id=e['id']) }}"
+                      onsubmit="return confirm('Delete this expense?');">
+                    <input type="hidden" name="category" value="{{ selected }}">
+                    <button type="submit" class="btn-delete">Delete</button>
+                </form>
+            </td>
         </tr>
         {% endfor %}
     </table>

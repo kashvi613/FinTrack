@@ -1,3 +1,6 @@
+import math
+from datetime import datetime
+
 from flask import Flask, render_template, request, redirect, url_for
 from database import get_connection, init_db
 
@@ -23,6 +26,34 @@ def format_inr(value):
             parts.insert(0, rest)
         whole = ",".join(parts) + "," + last3
     return f"₹{whole}.{decimal}"
+
+
+def validate_expense(form):
+    """Form data check karta hai. Return: (error_message, amount)."""
+    # Kyun server-side validation: HTML ke required/min browser mein bypass ho sakte hain
+    try:
+        amount = float(form["amount"])
+    except ValueError:
+        return "Amount must be a number.", None
+
+    # Kyun isfinite: float("nan") aur float("inf") bhi valid float hote hain
+    if not math.isfinite(amount) or amount <= 0:
+        return "Amount must be greater than 0.", None
+    if amount > 10_000_000:
+        return "Amount is too large.", None
+
+    if form["category"] not in CATEGORIES:
+        return "Please choose a valid category.", None
+
+    try:
+        datetime.strptime(form["date"], "%Y-%m-%d")
+    except ValueError:
+        return "Please enter a valid date.", None
+
+    if len(form["description"]) > 100:
+        return "Description must be 100 characters or less.", None
+
+    return None, amount
 
 
 @app.route("/")
@@ -96,62 +127,45 @@ def history():
 
 @app.route("/add", methods=["GET", "POST"])
 def add_expense():
+    error = None
+    # Kyun form dict: galti hone par user ne jo bhara tha wo wapas dikhana hai
+    form = {"amount": "", "category": CATEGORIES[0], "date": "", "description": ""}
+
     if request.method == "POST":
-        amount = float(request.form["amount"])
-        category = request.form["category"]
-        date = request.form["date"]
-        description = request.form["description"]
+        form = {
+            "amount": request.form.get("amount", "").strip(),
+            "category": request.form.get("category", ""),
+            "date": request.form.get("date", ""),
+            "description": request.form.get("description", "").strip(),
+        }
+        error, amount = validate_expense(form)
 
-        conn = get_connection()
-        # Kyun ?: SQL injection se bachne ke liye parameterized query
-        conn.execute(
-            "INSERT INTO expenses (amount, category, date, description) VALUES (?, ?, ?, ?)",
-            (amount, category, date, description),
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for("home"))
+        if error is None:
+            conn = get_connection()
+            # Kyun ?: SQL injection se bachne ke liye parameterized query
+            conn.execute(
+                "INSERT INTO expenses (amount, category, date, description) VALUES (?, ?, ?, ?)",
+                (amount, form["category"], form["date"], form["description"]),
+            )
+            conn.commit()
+            conn.close()
+            return redirect(url_for("home"))
 
-    return render_template("add.html", categories=CATEGORIES)
+    return render_template("add.html", categories=CATEGORIES, form=form, error=error)
+
+
+# Kyun <int:expense_id>: URL ka number function ko mil jaata hai (/delete/5 -> expense_id = 5)
+# Kyun sirf POST: delete data badalta hai, GET se hota to koi link kholte hi data ud jata
+@app.route("/delete/<int:expense_id>", methods=["POST"])
+def delete_expense(expense_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+    conn.commit()
+    conn.close()
+
+    # Delete ke baad usi filter par wapas jao jahan se aaye the
+    return redirect(url_for("history", category=request.form.get("category") or None))
 
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-# from flask import Flask: Flask library se Flask class import kar rahe hain.
-# app = Flask(__name__): ye hamara web application object banata hai. __name__ 
-# Flask ko batata hai ki project ki files (templates, static) kahan hain.
-# @app.route("/"): ye decorator hai. Matlab: jab koi browser / (home page) khole, 
-# neeche wala function chalao. Isi ko route kehte hain.
-# def home(): aur return "...": ye function browser ko jo text return karega 
-# wahi screen pe dikhega.
-# if __name__ == "__main__":: ye tab True hota hai jab tum file ko seedha 
-# python app.py se chalao. Kisi aur file se import hone par server automatically 
-# start nahi hoga.
-# app.run(debug=True): server start karta hai. debug=True se code save karte hi 
-# server auto-reload hota hai aur error browser mein dikhta hai. Ye sirf development ke 
-# liye hai, production mein kabhi on nahi rakhte.
-
-# python app.py
-#  * Serving Flask app 'app'
-#  * Debug mode: on
-# WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
-#  * Running on http://127.0.0.1:5000
-# Press CTRL+C to quit
-#  * Restarting with stat
-#  * Debugger is active!
-#  * Debugger PIN: 255-243-657
-# 127.0.0.1 - - [14/Nov/2026 16:42:01] "GET / HTTP/1.1" 200 -
-# 127.0.0.1 - - [14/Nov/2026 16:42:01] "GET /favicon.ico HTTP/1.1" 404 -
-
-# Debug mode: on: debug=True ki wajah se. Code save karte hi server restart hoga.
-# Running on http://127.0.0.1:5000: 127.0.0.1 tumhara apna computer hai (localhost), 
-# aur 5000 port number hai. Matlab server sirf tumhare laptop pe chal raha hai, 
-# internet pe nahi.
-# Restarting with stat: Flask file changes pe nazar rakhta hai aur auto-reload karta hai.
-# Debugger PIN: browser mein error aaye toh interactive debugger khulta hai, 
-# ye PIN uske liye hai. Ise kisi ke saath share nahi karte.
-
-# render_template ko import kiya. Ye templates/ folder se HTML file uthata hai 
-# aur browser ko bhejta hai.
-# home() ab seedha text return karne ke bajay index.html return karta hai.

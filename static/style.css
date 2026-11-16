@@ -190,3 +190,26 @@ select option { background: #0f1f4d; }
 /* Dashboard chart */
 .chart-card { margin-bottom: 24px; }
 .chart-wrap { position: relative; height: 320px; }
+
+/* Validation error box */
+.error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+/* Delete button */
+.btn-delete {
+    background: transparent;
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.btn-delete:hover { background: rgba(248, 113, 113, 0.15); }

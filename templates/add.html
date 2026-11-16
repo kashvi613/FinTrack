@@ -6,22 +6,26 @@
 <h1>Add Expense</h1>
 
 <div class="card form-card">
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
     <form method="POST">
         <label>Amount (₹)</label>
-        <input type="number" name="amount" step="0.01" min="0.01" required>
+        <input type="number" name="amount" step="0.01" min="0.01" value="{{ form['amount'] }}" required>
 
         <label>Category</label>
         <select name="category" required>
             {% for c in categories %}
-            <option value="{{ c }}">{{ c }}</option>
+            <option value="{{ c }}" {{ 'selected' if c == form['category'] else '' }}>{{ c }}</option>
             {% endfor %}
         </select>
 
         <label>Date</label>
-        <input type="date" name="date" required>
+        <input type="date" name="date" value="{{ form['date'] }}" required>
 
         <label>Description</label>
-        <input type="text" name="description" placeholder="e.g. Lunch with friends">
+        <input type="text" name="description" maxlength="100" value="{{ form['description'] }}" placeholder="e.g. Lunch with friends">
 
         <button type="submit" class="btn">Save Expense</button>
     </form>
