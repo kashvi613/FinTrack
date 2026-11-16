@@ -20,15 +20,28 @@
     </div>
 </div>
 
-<div class="card chart-card">
-    <h2>Spending by Category</h2>
-    {% if values %}
-    <div class="chart-wrap">
-        <canvas id="categoryChart"></canvas>
+<div class="charts-grid">
+    <div class="card chart-card">
+        <h2>Spending by Category</h2>
+        {% if values %}
+        <div class="chart-wrap">
+            <canvas id="categoryChart"></canvas>
+        </div>
+        {% else %}
+        <p class="muted">Add some expenses to see your spending chart.</p>
+        {% endif %}
     </div>
-    {% else %}
-    <p class="muted">Add some expenses to see your spending chart.</p>
-    {% endif %}
+
+    <div class="card chart-card">
+        <h2>Monthly Trend</h2>
+        {% if month_values %}
+        <div class="chart-wrap">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+        {% else %}
+        <p class="muted">Add some expenses to see your monthly trend.</p>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card">
@@ -61,6 +74,8 @@
     // Kyun tojson: Python ki list ko JavaScript ki array bana deta hai
     const labels = {{ labels|tojson }};
     const values = {{ values|tojson }};
+    const monthLabels = {{ month_labels|tojson }};
+    const monthValues = {{ month_values|tojson }};
 
     // Badge colors ke saath match karte hue
     const colorMap = {
@@ -72,29 +87,65 @@
     };
     const colors = labels.map(function (label) { return colorMap[label]; });
 
+    // Dono charts mein same tooltip: ₹ ke saath Indian number format
+    function rupeeLabel(ctx) {
+        return " ₹" + ctx.parsed.toLocaleString("en-IN");
+    }
+
     Chart.defaults.color = "#94a3b8";
     Chart.defaults.font.family = "Inter, sans-serif";
 
+    // Chart 1: category doughnut
     new Chart(document.getElementById("categoryChart"), {
         type: "doughnut",
         data: {
             labels: labels,
-            datasets: [{
-                data: values,
-                backgroundColor: colors,
-                borderWidth: 0
-            }]
+            datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }]
         },
         options: {
             maintainAspectRatio: false,
             cutout: "65%",
             plugins: {
-                legend: { position: "right" },
+                legend: { position: "bottom" },
+                tooltip: { callbacks: { label: rupeeLabel } }
+            }
+        }
+    });
+
+    // Chart 2: monthly line chart
+    new Chart(document.getElementById("monthlyChart"), {
+        type: "line",
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                data: monthValues,
+                borderColor: "#3b82f6",
+                backgroundColor: "rgba(59, 130, 246, 0.15)",
+                fill: true,
+                tension: 0.35,
+                pointRadius: 5,
+                pointBackgroundColor: "#3b82f6"
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
-                            return " ₹" + ctx.parsed.toLocaleString("en-IN");
+                            return " ₹" + ctx.parsed.y.toLocaleString("en-IN");
                         }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: "rgba(255, 255, 255, 0.06)" },
+                    ticks: {
+                        callback: function (v) { return "₹" + v.toLocaleString("en-IN"); }
                     }
                 }
             }

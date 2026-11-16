@@ -56,6 +56,8 @@ def validate_expense(form):
     return None, amount
 
 
+# ---------------- Web pages (HTML) ----------------
+
 @app.route("/")
 def home():
     conn = get_connection()
@@ -84,11 +86,27 @@ def home():
         """
     ).fetchall()
 
+    # Kyun strftime: date "2026-11-16" se sirf "2026-11" (saal-mahina) nikalta hai
+    monthly_rows = conn.execute(
+        """
+        SELECT strftime('%Y-%m', date) AS month, SUM(amount) AS total
+        FROM expenses
+        GROUP BY month
+        ORDER BY month
+        """
+    ).fetchall()
+
     conn.close()
 
     # Kyun lists: sqlite3.Row JSON mein convert nahi hota, isliye simple lists banayi
     labels = [row["category"] for row in category_rows]
     values = [row["total"] for row in category_rows]
+
+    # "2026-11" -> "Nov 2026" (chart pe padhne mein aasaan)
+    month_labels = [
+        datetime.strptime(row["month"], "%Y-%m").strftime("%b %Y") for row in monthly_rows
+    ]
+    month_values = [row["total"] for row in monthly_rows]
 
     return render_template(
         "index.html",
@@ -96,6 +114,8 @@ def home():
         expenses=recent,
         labels=labels,
         values=values,
+        month_labels=month_labels,
+        month_values=month_values,
     )
 
 
@@ -165,6 +185,7 @@ def delete_expense(expense_id):
 
     # Delete ke baad usi filter par wapas jao jahan se aaye the
     return redirect(url_for("history", category=request.form.get("category") or None))
+
 
 # ---------------- REST API (JSON) ----------------
 
@@ -256,6 +277,24 @@ def api_summary():
         "average": round(stats["average"], 2),
         "by_category": [dict(row) for row in by_category],
     })
+
+
+@app.route("/api/monthly", methods=["GET"])
+def api_monthly():
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT strftime('%Y-%m', date) AS month,
+               SUM(amount) AS total,
+               COUNT(*) AS count
+        FROM expenses
+        GROUP BY month
+        ORDER BY month
+        """
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
+
 
 if __name__ == "__main__":
     app.run(debug=True)
