@@ -3,6 +3,7 @@ from datetime import datetime
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from database import get_connection, init_db
+from insights import build_insights
 
 app = Flask(__name__)
 init_db()
@@ -295,6 +296,15 @@ def api_monthly():
     conn.close()
     return jsonify([dict(row) for row in rows])
 
+@app.route("/insights")
+def insights_page():
+    return render_template("insights.html", data=build_insights())
+
+
+@app.route("/api/insights", methods=["GET"])
+def api_insights():
+    # Kyun "or {}": data na ho (khaali table) to build_insights None deta hai, API ko khaali JSON dena hai
+    return jsonify(build_insights() or {})
 
 if __name__ == "__main__":
     app.run(debug=True)

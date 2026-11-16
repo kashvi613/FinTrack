@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Insights - FinTrack{% endblock %}
+
+{% block content %}
+<h1>Insights</h1>
+
+{% if data %}
+<div class="insights-grid">
+    <div class="card stat">
+        <p class="stat-label">Top Category</p>
+        <p class="stat-value">{{ data["top_category"]["category"] }}</p>
+        <p class="muted">{{ data["top_category"]["share"] }}% of total spending</p>
+    </div>
+
+    <div class="card stat">
+        <p class="stat-label">Biggest Expense</p>
+        <p class="stat-value">{{ data["biggest"]["amount"]|inr }}</p>
+        <p class="muted">{{ data["biggest"]["category"] }} on {{ data["biggest"]["date"] }}</p>
+    </div>
+
+    <div class="card stat">
+        <p class="stat-label">Highest-Spend Day</p>
+        <p class="stat-value">{{ data["top_day"]["total"]|inr }}</p>
+        <p class="muted">{{ data["top_day"]["date"] }}</p>
+    </div>
+
+    <div class="card stat">
+        <p class="stat-label">Average Daily Spend</p>
+        <p class="stat-value">{{ data["avg_daily"]|inr }}</p>
+        <p class="muted">across the whole period</p>
+    </div>
+
+    <div class="card stat">
+        <p class="stat-label">Month-over-Month</p>
+        {% if data["month_change"] %}
+        <p class="stat-value {{ 'up' if data['month_change']['change'] > 0 else 'down' }}">
+            {{ '+' if data['month_change']['change'] > 0 else '' }}{{ data["month_change"]["change"] }}%
+        </p>
+        <p class="muted">{{ data["month_change"]["to_month"] }} vs {{ data["month_change"]["from_month"] }}</p>
+        {% else %}
+        <p class="stat-value">N/A</p>
+        <p class="muted">Needs 2 complete months of data</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>Category Breakdown</h2>
+    <table>
+        <tr>
+            <th>Category</th>
+            <th class="right">Total</th>
+            <th class="right">Share</th>
+        </tr>
+        {% for c in data["categories"] %}
+        <tr>
+            <td><span class="badge {{ c['category']|lower }}">{{ c["category"] }}</span></td>
+            <td class="right">{{ c["total"]|inr }}</td>
+            <td class="right">{{ c["share"] }}%</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p class="muted note">
+        Month-over-month compares only complete months. The first and current
+        months are partial, so they are left out.
+    </p>
+</div>
+{% else %}
+<div class="card">
+    <p class="muted">No data yet. Add some expenses to see insights.</p>
+</div>
+{% endif %}
+{% endblock %}
