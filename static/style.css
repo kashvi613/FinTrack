@@ -256,3 +256,56 @@ select option { background: #0f1f4d; }
     font-size: 14px;
 }
 .cancel-link:hover { color: var(--text); }
+
+/* ---------- Responsive pass (mobile) ---------- */
+@media (max-width: 768px) {
+    /* Sidebar upar ki bar nahi, neeche fixed app-jaisi navigation bar */
+    .sidebar {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: auto;
+        padding: 8px 10px;
+        background: #061540;
+        border-right: none;
+        border-bottom: none;
+        border-top: 1px solid var(--card-border);
+        z-index: 10;
+    }
+    .logo { display: none; }
+    .sidebar nav {
+        flex-direction: row;
+        justify-content: space-around;
+        gap: 4px;
+    }
+    .sidebar a {
+        flex: 1;
+        text-align: center;
+        padding: 10px 4px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    /* Neeche ki bar ke liye jagah chhodo, warna last content chhup jaata hai */
+    .content { margin-left: 0; padding: 20px 16px 90px; }
+
+    h1 { font-size: 24px; margin-bottom: 16px; }
+    .stat-value { font-size: 24px; }
+    .card { padding: 18px; }
+
+    /* Table chaudi ho to card ke andar sideways scroll, page toot-ta nahi */
+    .card { overflow-x: auto; }
+    table { min-width: 560px; }
+
+    .chart-wrap { height: 260px; }
+
+    /* Filter bar: label upar, dropdown poori chaudai */
+    .filter-bar { flex-wrap: wrap; }
+    .filter-bar select { width: 100%; }
+
+    /* Ungli se dabane layak bade buttons */
+    .btn, .btn-edit, .btn-delete { min-height: 40px; }
+    .btn-edit, .btn-delete { display: inline-flex; align-items: center; }
+}
