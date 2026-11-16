@@ -186,3 +186,7 @@ select option { background: #0f1f4d; }
 }
 .filter-bar label { margin: 0; }
 .filter-bar select { width: 200px; }
+
+/* Dashboard chart */
+.chart-card { margin-bottom: 24px; }
+.chart-wrap { position: relative; height: 320px; }

@@ -20,6 +20,17 @@
     </div>
 </div>
 
+<div class="card chart-card">
+    <h2>Spending by Category</h2>
+    {% if values %}
+    <div class="chart-wrap">
+        <canvas id="categoryChart"></canvas>
+    </div>
+    {% else %}
+    <p class="muted">Add some expenses to see your spending chart.</p>
+    {% endif %}
+</div>
+
 <div class="card">
     <h2>Recent Expenses</h2>
     {% if expenses %}
@@ -43,4 +54,52 @@
     <p class="muted">No expenses yet. Add your first one!</p>
     {% endif %}
 </div>
+
+{% if values %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+    // Kyun tojson: Python ki list ko JavaScript ki array bana deta hai
+    const labels = {{ labels|tojson }};
+    const values = {{ values|tojson }};
+
+    // Badge colors ke saath match karte hue
+    const colorMap = {
+        Food: "#fb923c",
+        Travel: "#60a5fa",
+        Shopping: "#f472b6",
+        Education: "#c084fc",
+        Other: "#cbd5e1"
+    };
+    const colors = labels.map(function (label) { return colorMap[label]; });
+
+    Chart.defaults.color = "#94a3b8";
+    Chart.defaults.font.family = "Inter, sans-serif";
+
+    new Chart(document.getElementById("categoryChart"), {
+        type: "doughnut",
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            cutout: "65%",
+            plugins: {
+                legend: { position: "right" },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return " ₹" + ctx.parsed.toLocaleString("en-IN");
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

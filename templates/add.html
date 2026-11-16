@@ -1,72 +1,29 @@
-from flask import Flask, render_template, request, redirect, url_for
-from database import get_connection, init_db
+{% extends "base.html" %}
 
-app = Flask(__name__)
-init_db()
+{% block title %}Add Expense - FinTrack{% endblock %}
 
-CATEGORIES = ["Food", "Travel", "Shopping", "Education", "Other"]
+{% block content %}
+<h1>Add Expense</h1>
 
+<div class="card form-card">
+    <form method="POST">
+        <label>Amount (₹)</label>
+        <input type="number" name="amount" step="0.01" min="0.01" required>
 
-# Custom Jinja filter: 150000 -> ₹1,50,000.00 (Indian grouping)
-@app.template_filter("inr")
-def format_inr(value):
-    value = float(value or 0)
-    whole, decimal = f"{value:.2f}".split(".")
-    if len(whole) > 3:
-        last3 = whole[-3:]      # aakhri 3 digits ek group
-        rest = whole[:-3]       # baaki digits 2-2 ke groups mein
-        parts = []
-        while len(rest) > 2:
-            parts.insert(0, rest[-2:])
-            rest = rest[:-2]
-        if rest:
-            parts.insert(0, rest)
-        whole = ",".join(parts) + "," + last3
-    return f"₹{whole}.{decimal}"
+        <label>Category</label>
+        <select name="category" required>
+            {% for c in categories %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
 
+        <label>Date</label>
+        <input type="date" name="date" required>
 
-@app.route("/")
-def home():
-    conn = get_connection()
+        <label>Description</label>
+        <input type="text" name="description" placeholder="e.g. Lunch with friends">
 
-    # Kyun COALESCE: table khaali ho to SUM/AVG NULL deta hai, usse 0 bana deta hai
-    stats = conn.execute(
-        """
-        SELECT COALESCE(SUM(amount), 0) AS total,
-               COUNT(*) AS count,
-               COALESCE(AVG(amount), 0) AS average
-        FROM expenses
-        """
-    ).fetchone()
-
-    recent = conn.execute(
-        "SELECT * FROM expenses ORDER BY date DESC, id DESC LIMIT 5"
-    ).fetchall()
-
-    conn.close()
-    return render_template("index.html", stats=stats, expenses=recent)
-
-
-@app.route("/add", methods=["GET", "POST"])
-def add_expense():
-    if request.method == "POST":
-        amount = float(request.form["amount"])
-        category = request.form["category"]
-        date = request.form["date"]
-        description = request.form["description"]
-
-        conn = get_connection()
-        # Kyun ?: SQL injection se bachne ke liye parameterized query
-        conn.execute(
-            "INSERT INTO expenses (amount, category, date, description) VALUES (?, ?, ?, ?)",
-            (amount, category, date, description),
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for("home"))
-
-    return render_template("add.html", categories=CATEGORIES)
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+        <button type="submit" class="btn">Save Expense</button>
+    </form>
+</div>
+{% endblock %}

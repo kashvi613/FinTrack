@@ -43,8 +43,30 @@ def home():
         "SELECT * FROM expenses ORDER BY date DESC, id DESC LIMIT 5"
     ).fetchall()
 
+    # Kyun GROUP BY: har category ke rows ek group mein, phir har group ka SUM
+    category_rows = conn.execute(
+        """
+        SELECT category, SUM(amount) AS total
+        FROM expenses
+        GROUP BY category
+        ORDER BY total DESC
+        """
+    ).fetchall()
+
     conn.close()
-    return render_template("index.html", stats=stats, expenses=recent)
+
+    # Kyun lists: sqlite3.Row JSON mein convert nahi hota, isliye simple lists banayi
+    labels = [row["category"] for row in category_rows]
+    values = [row["total"] for row in category_rows]
+
+    return render_template(
+        "index.html",
+        stats=stats,
+        expenses=recent,
+        labels=labels,
+        values=values,
+    )
+
 
 @app.route("/history")
 def history():
@@ -70,6 +92,7 @@ def history():
         categories=CATEGORIES,
         selected=selected,
     )
+
 
 @app.route("/add", methods=["GET", "POST"])
 def add_expense():
