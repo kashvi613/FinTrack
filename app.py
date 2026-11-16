@@ -1,7 +1,7 @@
 import math
 from datetime import datetime
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, abort
 from database import get_connection, init_db
 from insights import build_insights
 
@@ -188,6 +188,52 @@ def delete_expense(expense_id):
     return redirect(url_for("history", category=request.form.get("category") or None))
 
 
+@app.route("/edit/<int:expense_id>", methods=["GET", "POST"])
+def edit_expense(expense_id):
+    conn = get_connection()
+    expense = conn.execute(
+        "SELECT * FROM expenses WHERE id = ?", (expense_id,)
+    ).fetchone()
+
+    # Kyun abort(404): jo expense hai hi nahi, uska edit page nahi khul sakta
+    if expense is None:
+        conn.close()
+        abort(404)
+
+    error = None
+    # Kyun pehle se bhari form: user ko purani values dikhni chahiye, badalne ke liye
+    form = {
+        "amount": expense["amount"],
+        "category": expense["category"],
+        "date": expense["date"],
+        "description": expense["description"] or "",
+    }
+
+    if request.method == "POST":
+        form = {
+            "amount": request.form.get("amount", "").strip(),
+            "category": request.form.get("category", ""),
+            "date": request.form.get("date", ""),
+            "description": request.form.get("description", "").strip(),
+        }
+        # Kyun wahi validate_expense: add aur edit ke rules same rahein
+        error, amount = validate_expense(form)
+
+        if error is None:
+            # Kyun WHERE id = ?: bina WHERE ke saari rows update ho jaati hain (DELETE jaisa khatra)
+            conn.execute(
+                "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? WHERE id = ?",
+                (amount, form["category"], form["date"], form["description"], expense_id),
+            )
+            conn.commit()
+            conn.close()
+            return redirect(url_for("history"))
+
+    conn.close()
+    return render_template(
+        "add.html", categories=CATEGORIES, form=form, error=error, editing=True
+    )
+
 # ---------------- REST API (JSON) ----------------
 
 @app.route("/api/expenses", methods=["GET"])
@@ -250,6 +296,32 @@ def api_delete_expense(expense_id):
         return jsonify({"error": "Expense not found."}), 404
     return jsonify({"deleted": expense_id})
 
+
+@app.route("/api/expenses/<int:expense_id>", methods=["PUT"])
+def api_update_expense(expense_id):
+    data = request.get_json(silent=True) or {}
+
+    form = {
+        "amount": str(data.get("amount", "")).strip(),
+        "category": str(data.get("category", "")),
+        "date": str(data.get("date", "")),
+        "description": str(data.get("description", "")).strip(),
+    }
+    error, amount = validate_expense(form)
+    if error:
+        return jsonify({"error": error}), 400
+
+    conn = get_connection()
+    cursor = conn.execute(
+        "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? WHERE id = ?",
+        (amount, form["category"], form["date"], form["description"], expense_id),
+    )
+    conn.commit()
+    conn.close()
+
+    if cursor.rowcount == 0:
+        return jsonify({"error": "Expense not found."}), 404
+    return jsonify({"id": expense_id, "amount": amount, **{k: form[k] for k in ("category", "date", "description")}})
 
 @app.route("/api/summary", methods=["GET"])
 def api_summary():

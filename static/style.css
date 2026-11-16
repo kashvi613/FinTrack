@@ -229,3 +229,30 @@ select option { background: #0f1f4d; }
 @media (max-width: 768px) {
     .insights-grid { grid-template-columns: 1fr; }
 }
+
+/* Edit link + actions row */
+.actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+}
+.btn-edit {
+    color: #60a5fa;
+    text-decoration: none;
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+}
+.btn-edit:hover { background: rgba(96, 165, 250, 0.15); }
+
+.cancel-link {
+    display: block;
+    text-align: center;
+    margin-top: 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+}
+.cancel-link:hover { color: var(--text); }

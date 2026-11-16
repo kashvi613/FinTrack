@@ -169,3 +169,50 @@ def test_insights_top_category_and_biggest(client):
     assert data["top_category"]["category"] == "Shopping"
     assert data["biggest"]["amount"] == 5000
     assert data["total"] == 5100
+# ---------- Edit / Update ----------
+
+VALID_UPDATE = {"amount": 999, "category": "Travel", "date": "2026-11-01", "description": "updated"}
+
+
+def test_api_update_changes_the_expense(client):
+    new_id = make_expense(client, amount=100).get_json()["id"]
+
+    response = client.put(f"/api/expenses/{new_id}", json=VALID_UPDATE)
+    assert response.status_code == 200
+
+    saved = client.get("/api/expenses").get_json()[0]
+    assert saved["amount"] == 999
+    assert saved["category"] == "Travel"
+    assert saved["description"] == "updated"
+
+
+def test_api_update_missing_returns_404(client):
+    response = client.put("/api/expenses/999", json=VALID_UPDATE)
+    assert response.status_code == 404
+
+
+def test_api_update_rejects_bad_input_and_keeps_old_data(client):
+    new_id = make_expense(client, amount=250).get_json()["id"]
+
+    response = client.put(f"/api/expenses/{new_id}", json={**VALID_UPDATE, "amount": -1})
+    assert response.status_code == 400
+    assert client.get("/api/expenses").get_json()[0]["amount"] == 250   # badla nahi
+
+
+def test_edit_page_prefills_and_saves(client):
+    new_id = make_expense(client, description="old note").get_json()["id"]
+
+    page = client.get(f"/edit/{new_id}")
+    assert page.status_code == 200
+    assert b"old note" in page.data          # purani value form mein bhari hai
+
+    response = client.post(
+        f"/edit/{new_id}",
+        data={"amount": "777", "category": "Shopping", "date": "2026-11-02", "description": "new note"},
+    )
+    assert response.status_code == 302
+    assert client.get("/api/expenses").get_json()[0]["description"] == "new note"
+
+
+def test_edit_missing_expense_returns_404(client):
+    assert client.get("/edit/999").status_code == 404

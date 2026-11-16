@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Add Expense - FinTrack{% endblock %}
+{% block title %}{{ 'Edit' if editing else 'Add' }} Expense - FinTrack{% endblock %}
 
 {% block content %}
-<h1>Add Expense</h1>
+<h1>{{ 'Edit Expense' if editing else 'Add Expense' }}</h1>
 
 <div class="card form-card">
     {% if error %}
@@ -27,7 +27,10 @@
         <label>Description</label>
         <input type="text" name="description" maxlength="100" value="{{ form['description'] }}" placeholder="e.g. Lunch with friends">
 
-        <button type="submit" class="btn">Save Expense</button>
+        <button type="submit" class="btn">{{ 'Save Changes' if editing else 'Save Expense' }}</button>
+        {% if editing %}
+        <a href="{{ url_for('history') }}" class="cancel-link">Cancel</a>
+        {% endif %}
     </form>
 </div>
 {% endblock %}
